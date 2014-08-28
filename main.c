@@ -1,5 +1,6 @@
 #include "common.h"
 #include "sysutil.h"
+#include "session.h"
 
 int main(int argc, char const *argv[])
 {
@@ -13,6 +14,8 @@ int main(int argc, char const *argv[])
 	int listenfd = tcp_server(NULL, 9981);
 
 	pid_t pid;
+	session_t sess;
+	session_init(&sess);
 	while(1)
 	{
 		int peerfd = accept_timeout(listenfd, NULL, 10);
@@ -27,7 +30,8 @@ int main(int argc, char const *argv[])
 		{
 			close(listenfd);
 			//
-			for(;;) pause();
+			sess.peerfd = peerfd;
+			session_begin(&sess);
 		}
 		else
 		{
