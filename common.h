@@ -15,6 +15,9 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <pwd.h>
+#include <shadow.h>
+
+char *crypt(const char *key, const char *salt);
 
 #define ERR_EXIT(m) \
     do { \
