@@ -39,6 +39,7 @@ int main(int argc, char const *argv[])
 			
 			sess.peerfd = peerfd;
 			session_begin(&sess);
+			exit(EXIT_SUCCESS);
 		}
 		else
 		{
