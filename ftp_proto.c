@@ -6,7 +6,7 @@
 void handle_proto(session_t *sess)
 {
 	
-	writen(sess->peerfd, "220 (miniftpd 0.1)\r\n", strlen("220 (miniftpd 0.1)\r\n"));
+	writen(sess->peerfd, "220 (FtpServer 1.0)\r\n", strlen("220 (FtpServer 1.0)\r\n"));
 	while(1)
 	{
 		//int ret = readline(sess->peerfd, )

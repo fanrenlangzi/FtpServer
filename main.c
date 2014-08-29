@@ -29,7 +29,7 @@ int main(int argc, char const *argv[])
 		else if(pid == 0)
 		{
 			close(listenfd);
-			//
+			
 			sess.peerfd = peerfd;
 			session_begin(&sess);
 		}
