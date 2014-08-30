@@ -3,6 +3,7 @@
 #include "session.h"
 #include "sysutil.h"
 #include "ftp_codes.h"
+#include "configure.h"
 
 //
 typedef struct ftpcmd
@@ -147,6 +148,12 @@ void do_pass(session_t *sess)
 	if(seteuid(pw->pw_uid) == -1)
 		ERR_EXIT("seteuid");
 
+	//home
+	if(chdir(pw->pw_dir) == -1)
+		ERR_EXIT("chdir");
+	//umask
+	umask(tunable_local_umask);
+
 	ftp_reply(sess, FTP_LOGINOK, "Login successful.");
 }
 
@@ -179,14 +186,14 @@ void do_pasv(session_t *sess)
 void do_type(session_t *sess)
 {
 	//指定FTP的传输模式
-	if (strcmp(sess->arg, "A") == 0)
+	if (strcmp(sess->args, "A") == 0)
 	{
-		sess->is_ascii = 1;
+		sess->ascii_mode = 1;
 		ftp_reply(sess, FTP_TYPEOK, "Switching to ASCII mode.");
 	}
-	else if (strcmp(sess->arg, "I") == 0)
+	else if (strcmp(sess->args, "I") == 0)
 	{
-		sess->is_ascii = 0;
+		sess->ascii_mode = 0;
 		ftp_reply(sess, FTP_TYPEOK, "Switching to Binary mode.");
 	}
 	else
