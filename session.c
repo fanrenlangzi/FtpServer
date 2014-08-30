@@ -11,6 +11,8 @@ void session_init(session_t *sess)
 	sess->peerfd = -1;
 	sess->nobody_fd = -1;
 	sess->proto_fd = -1;
+
+	sess->ascii_mode = 0;
 }
 
 void session_begin(session_t *sess)

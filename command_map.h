@@ -5,6 +5,7 @@
 
 void do_command_map(session_t *sess);
 void ftp_reply(session_t *sess, int status, const char *text);
+void ftp_lreply(session_t *sess, int status, const char *text);
 
 void do_user(session_t *sess);
 void do_pass(session_t *sess);
