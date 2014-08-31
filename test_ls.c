@@ -107,6 +107,13 @@ const char *statbuf_get_perms(struct stat *sbuf)
     if(mode & S_IXOTH)
         perms[9] = 'x';
 
+    if(mode & S_ISUID)
+        perms[3] = (perms[3] == 'x') ? 's' : 'S';
+    if(mode & S_ISGID)
+        perms[6] = (perms[6] == 'x') ? 's' : 'S';
+    if(mode & S_ISVTX)
+        perms[9] = (perms[9] == 'x') ? 't' : 'T';
+
     return perms;
 }
 
