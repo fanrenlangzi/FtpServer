@@ -3,6 +3,8 @@
 
 #include "common.h"
 
+//创建客户fd
+int tcp_client(unsigned int port);
 //创建监听fd
 int tcp_server(const char *host, unsigned short port);
 

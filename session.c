@@ -16,6 +16,7 @@ void session_init(session_t *sess)
 	sess->ascii_mode = 0;
 
 	sess->p_addr = NULL;
+	sess->data_fd = -1;
 }
 
 void session_begin(session_t *sess)
