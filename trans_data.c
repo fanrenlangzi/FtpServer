@@ -45,6 +45,18 @@ int get_trans_data_fd(session_t *sess)
 		sess->p_addr = NULL;
 	}
 
+    if(is_pasv)
+    {
+        int peerfd = accept_timeout(sess->listen_fd, NULL, tunable_accept_timeout);
+        if(peerfd == -1)
+            ERR_EXIT("accept_timeout");
+        sess->data_fd = peerfd;
+        
+        //清除pasv模式
+        close(sess->listen_fd);
+        sess->listen_fd = -1;
+    }
+
 	return 1;
 }
 
@@ -205,5 +217,5 @@ int is_port_active(session_t *sess)
 
 int is_pasv_active(session_t *sess)
 {
-	return 0;
+	return (sess->listen_fd != -1);
 }
