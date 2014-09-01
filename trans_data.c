@@ -12,8 +12,8 @@ static const char *statbuf_get_filename(struct stat *sbuf, const char *name);
 static const char *statbuf_get_user_info(struct stat *sbuf);
 static const char *statbuf_get_size(struct stat *sbuf);
 
-int is_port_active(session_t *sess);
-int is_pasv_active(session_t *sess);
+static int is_port_active(session_t *sess);
+static int is_pasv_active(session_t *sess);
 
 
 
@@ -30,6 +30,12 @@ int get_trans_data_fd(session_t *sess)
 		ftp_reply(sess, FTP_BADSENDCONN, "Use PORT or PASV first.");
 		return 0;
 	}
+
+    if(is_port && is_pasv)
+    {
+        fprintf(stderr, "both of PORT and PASV are active\n");
+        exit(EXIT_FAILURE);
+    }
 
 	//主动模式
 	if(is_port)
@@ -51,7 +57,7 @@ int get_trans_data_fd(session_t *sess)
         if(peerfd == -1)
             ERR_EXIT("accept_timeout");
         sess->data_fd = peerfd;
-        
+
         //清除pasv模式
         close(sess->listen_fd);
         sess->listen_fd = -1;
@@ -210,12 +216,12 @@ static const char *statbuf_get_size(struct stat *sbuf)
 }
 
 
-int is_port_active(session_t *sess)
+static int is_port_active(session_t *sess)
 {
 	return (sess->p_addr != NULL);
 }
 
-int is_pasv_active(session_t *sess)
+static int is_pasv_active(session_t *sess)
 {
 	return (sess->listen_fd != -1);
 }
