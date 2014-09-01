@@ -2,6 +2,7 @@
 #include "common.h"
 #include "ftp_nobody.h"
 #include "ftp_proto.h"
+#include "priv_sock.h"
 
 void session_init(session_t *sess)
 {
@@ -22,23 +23,19 @@ void session_init(session_t *sess)
 
 void session_begin(session_t *sess)
 {
-	int fds[2];
-	if(socketpair(PF_UNIX, SOCK_STREAM, 0, fds) == -1)
-		ERR_EXIT("socketpair");
+	priv_sock_init(sess);
 
 	pid_t pid;
 	if((pid = fork()) == -1)
 		ERR_EXIT("fork");
 	else if(pid == 0)
 	{
-		close(fds[0]);
-		sess->proto_fd = fds[1];
+		priv_sock_set_proto_context(sess);
 		handle_proto(sess);
 	}
 	else
 	{
-		close(fds[1]);
-		sess->nobody_fd = fds[0];
+		priv_sock_set_nobody_context(sess);
 		handle_nobody(sess);
 	}
 

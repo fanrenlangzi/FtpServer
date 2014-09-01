@@ -6,9 +6,6 @@
 #include "command_map.h"
 
 
-
-
-
 //子进程不断的从FTP客户端接收FTP指令，并给与回应
 void handle_proto(session_t *sess)
 {
