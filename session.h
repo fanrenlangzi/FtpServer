@@ -20,6 +20,7 @@ typedef struct{
 
     struct sockaddr_in *p_addr; //port模式下对方的ip和port
     int data_fd; //数据传输fd
+    int listen_fd; //监听fd，用于PASV模式
 } session_t;
 
 //初始化session

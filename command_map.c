@@ -200,7 +200,28 @@ void do_port(session_t *sess)
 
 void do_pasv(session_t *sess)
 {
+	char ip[16] = {0};
+	get_local_ip(ip);
+	//创建监听套接字
+	int listenfd = tcp_server(ip, 0);
+	sess->listen_fd = listenfd;
 
+	//把ip和port发送给客户端
+	struct sockaddr_in addr;
+	socklen_t len = sizeof addr;
+	if(getsockname(listenfd, (struct sockaddr*)&addr, &len) == -1)
+		ERR_EXIT("getsockname");
+
+	//227 Entering Passive Mode (192,168,44,136,194,6).
+	unsigned int v[6];
+	sscanf(ip, "%u.%u.%u.%u", &v[0], &v[1], &v[2], &v[3]);
+	unsigned char *p = (unsigned char*)&addr.sin_port;
+	v[4] = p[0];
+	v[5] = p[1];
+
+	char text[1024] = {0};
+	snprintf(text, sizeof text, "Entering Passive Mode (%u,%u,%u,%u,%u,%u).", v[0], v[1], v[2], v[3], v[4], v[5]);
+	ftp_reply(sess, FTP_PASVOK, text);
 }
 
 void do_type(session_t *sess)

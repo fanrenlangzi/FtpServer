@@ -8,7 +8,7 @@ int tcp_client(unsigned int port);
 //创建监听fd
 int tcp_server(const char *host, unsigned short port);
 
-int getlocalip(char *ip);
+int get_local_ip(char *ip);
 
 //设置fd为阻塞或者非阻塞
 void activate_nonblock(int fd);
