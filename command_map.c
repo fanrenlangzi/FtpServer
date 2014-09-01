@@ -250,18 +250,15 @@ void do_appe(session_t *sess)
 void do_list(session_t *sess)
 {
 	//发起数据连接
-	int fd = tcp_client(0);
-	int ret = connect_timeout(fd, sess->p_addr, tunable_connect_timeout);
-	if(ret == -1)
-		return;
-	sess->data_fd = fd;
+	if(get_trans_data_fd(sess) == 0)
+		return ;
 
 	//给出150 Here comes the directory listing.
 	ftp_reply(sess, FTP_DATACONN, "Here comes the directory listing.");
 
 	//传输目录列表
 	trans_list(sess);
-	close(fd);	//传输结束记得关闭
+	close(sess->data_fd);	//传输结束记得关闭
 	sess->data_fd = -1;
 
 	//给出226 Directory send OK.

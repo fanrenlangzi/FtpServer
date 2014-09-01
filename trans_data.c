@@ -1,6 +1,9 @@
 #include "trans_data.h"
 #include "common.h"
 #include "sysutil.h"
+#include "ftp_codes.h"
+#include "command_map.h"
+#include "configure.h"
 
 
 static const char *statbuf_get_perms(struct stat *sbuf);
@@ -8,6 +11,42 @@ static const char *statbuf_get_date(struct stat *sbuf);
 static const char *statbuf_get_filename(struct stat *sbuf, const char *name);
 static const char *statbuf_get_user_info(struct stat *sbuf);
 static const char *statbuf_get_size(struct stat *sbuf);
+
+int is_port_active(session_t *sess);
+int is_pasv_active(session_t *sess);
+
+
+
+//返回值表示成功与否
+int get_trans_data_fd(session_t *sess)
+{
+	int is_port = is_port_active(sess);
+	int is_pasv = is_pasv_active(sess);
+
+
+	//两者都未开启，应返回425
+	if(!is_port && !is_pasv)
+	{
+		ftp_reply(sess, FTP_BADSENDCONN, "Use PORT or PASV first.");
+		return 0;
+	}
+
+	//主动模式
+	if(is_port)
+	{
+		int data_fd = tcp_client(0);
+		int ret = connect_timeout(data_fd, sess->p_addr, tunable_connect_timeout);
+		if(ret == -1)
+			ERR_EXIT("connect_timeout");
+		sess->data_fd = data_fd;
+
+		//释放port模式
+		free(sess->p_addr);
+		sess->p_addr = NULL;
+	}
+
+	return 1;
+}
 
 void trans_list(session_t *sess)
 {
@@ -156,4 +195,15 @@ static const char *statbuf_get_size(struct stat *sbuf)
     static char buf[100] = {0};
     snprintf(buf, sizeof buf, "%8lu", (unsigned long)sbuf->st_size);
     return buf;
+}
+
+
+int is_port_active(session_t *sess)
+{
+	return (sess->p_addr != NULL);
+}
+
+int is_pasv_active(session_t *sess)
+{
+	return 0;
 }
