@@ -17,6 +17,8 @@ typedef struct{
 
     uid_t user_uid;	//用户的uid
     int ascii_mode;	//是否为ascii传输模式
+
+    struct sockaddr_in *p_addr; //port模式下对方的ip和port
 } session_t;
 
 //初始化session

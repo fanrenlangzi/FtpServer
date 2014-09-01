@@ -14,6 +14,8 @@ void session_init(session_t *sess)
 
 	sess->user_uid = 0;
 	sess->ascii_mode = 0;
+
+	sess->p_addr = NULL;
 }
 
 void session_begin(session_t *sess)
