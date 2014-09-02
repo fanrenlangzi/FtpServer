@@ -229,6 +229,7 @@ static void get_port_data_fd(session_t *sess)
     char result = priv_sock_recv_result(sess->proto_fd);
     if(result == PRIV_SOCK_RESULT_BAD)
     {
+        ftp_reply(sess, FTP_BADCMD, "get port data_fd error");
         fprintf(stderr, "get data fd error\n");
         exit(EXIT_FAILURE);
     }
@@ -249,6 +250,7 @@ static void get_pasv_data_fd(session_t *sess)
     char res = priv_sock_recv_result(sess->proto_fd);
     if(res == PRIV_SOCK_RESULT_BAD)
     {
+        ftp_reply(sess, FTP_BADCMD, "get pasv data_fd error");
         fprintf(stderr, "get data fd error\n");
         exit(EXIT_FAILURE);
     }
