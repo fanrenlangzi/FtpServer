@@ -12,6 +12,8 @@ void handle_proto(session_t *sess)
 	ftp_reply(sess, FTP_GREET, "(FtpServer 1.0)");
 	while(1)
 	{
+		session_reset_command(sess); //清空状态
+		
 		int ret = readline(sess->peerfd, sess->command, MAX_COMMAND);
 		if(ret == -1)
 		{
