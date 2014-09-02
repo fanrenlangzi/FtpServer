@@ -39,7 +39,7 @@ void privop_pasv_listen(session_t *sess)
 	//创建listen fd
 	char ip[16] = {0};
 	get_local_ip(ip);
-	int listenfd = tcp_server(ip, 0);
+	int listenfd = tcp_server(ip, 20);
 	sess->listen_fd = listenfd;
 
 	struct sockaddr_in addr;

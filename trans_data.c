@@ -16,6 +16,9 @@ static const char *statbuf_get_size(struct stat *sbuf);
 static int is_port_active(session_t *sess);
 static int is_pasv_active(session_t *sess);
 
+static void get_port_data_fd(session_t *sess);
+static void get_pasv_data_fd(session_t *sess);
+
 
 
 //返回值表示成功与否
@@ -40,45 +43,11 @@ int get_trans_data_fd(session_t *sess)
 
     //主动模式
     if(is_port)
-    {
-        //发送cmd
-        priv_sock_send_cmd(sess->proto_fd, PRIV_SOCK_GET_DATA_SOCK);
-        //发送ip port
-        char *ip = inet_ntoa(sess->p_addr->sin_addr);
-        uint16_t port = ntohs(sess->p_addr->sin_port);
-        priv_sock_send_str(sess->proto_fd, ip, strlen(ip));
-        priv_sock_send_int(sess->proto_fd, port);
-        //接收应答 
-        char result = priv_sock_recv_result(sess->proto_fd);
-        if(result == PRIV_SOCK_RESULT_BAD)
-        {
-            fprintf(stderr, "get data fd error\n");
-            exit(EXIT_FAILURE);
-        }
-        //接收fd
-        sess->data_fd = priv_sock_recv_fd(sess->proto_fd);
+        get_port_data_fd(sess);
 
-        //释放port模式
-        free(sess->p_addr);
-        sess->p_addr = NULL;
-    }
-
+    //被动模式
     if(is_pasv)
-    {
-        //先给nobody发命令
-        priv_sock_send_cmd(sess->proto_fd, PRIV_SOCK_PASV_ACCEPT);
-
-        //接收结果
-        char res = priv_sock_recv_result(sess->proto_fd);
-        if(res == PRIV_SOCK_RESULT_BAD)
-        {
-            fprintf(stderr, "get data fd error\n");
-            exit(EXIT_FAILURE);
-        }
-
-        //接收fd
-        sess->data_fd = priv_sock_recv_fd(sess->proto_fd);
-    }
+        get_pasv_data_fd(sess);
 
     return 1;
 }
@@ -128,26 +97,26 @@ static const char *statbuf_get_perms(struct stat *sbuf)
     switch(mode & S_IFMT)
     {
         case S_IFSOCK:
-            perms[0] = 's';
-            break;
+        perms[0] = 's';
+        break;
         case S_IFLNK:
-            perms[0] = 'l';
-            break;
+        perms[0] = 'l';
+        break;
         case S_IFREG:
-            perms[0] = '-';
-            break;
+        perms[0] = '-';
+        break;
         case S_IFBLK:
-            perms[0] = 'b';
-            break;
+        perms[0] = 'b';
+        break;
         case S_IFDIR:
-            perms[0] = 'd';
-            break;
+        perms[0] = 'd';
+        break;
         case S_IFCHR:
-            perms[0] = 'c';
-            break;
+        perms[0] = 'c';
+        break;
         case S_IFIFO:
-            perms[0] = 'p';
-            break;
+        perms[0] = 'p';
+        break;
     }
 
     //权限
@@ -244,4 +213,46 @@ static int is_pasv_active(session_t *sess)
     priv_sock_send_cmd(sess->proto_fd, PRIV_SOCK_PASV_ACTIVE);
     //接收结果
     return priv_sock_recv_int(sess->proto_fd);
+}
+
+
+static void get_port_data_fd(session_t *sess)
+{
+    //发送cmd
+    priv_sock_send_cmd(sess->proto_fd, PRIV_SOCK_GET_DATA_SOCK);
+    //发送ip port
+    char *ip = inet_ntoa(sess->p_addr->sin_addr);
+    uint16_t port = ntohs(sess->p_addr->sin_port);
+    priv_sock_send_str(sess->proto_fd, ip, strlen(ip));
+    priv_sock_send_int(sess->proto_fd, port);
+    //接收应答 
+    char result = priv_sock_recv_result(sess->proto_fd);
+    if(result == PRIV_SOCK_RESULT_BAD)
+    {
+        fprintf(stderr, "get data fd error\n");
+        exit(EXIT_FAILURE);
+    }
+    //接收fd
+    sess->data_fd = priv_sock_recv_fd(sess->proto_fd);
+
+    //释放port模式
+    free(sess->p_addr);
+    sess->p_addr = NULL;
+}
+
+static void get_pasv_data_fd(session_t *sess)
+{
+    //先给nobody发命令
+    priv_sock_send_cmd(sess->proto_fd, PRIV_SOCK_PASV_ACCEPT);
+
+    //接收结果
+    char res = priv_sock_recv_result(sess->proto_fd);
+    if(res == PRIV_SOCK_RESULT_BAD)
+    {
+        fprintf(stderr, "get data fd error\n");
+        exit(EXIT_FAILURE);
+    }
+
+    //接收fd
+    sess->data_fd = priv_sock_recv_fd(sess->proto_fd);
 }
