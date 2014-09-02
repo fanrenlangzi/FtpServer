@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <errno.h>
 #include <signal.h>
@@ -22,6 +23,7 @@
 #include <time.h>
 #include <sys/ioctl.h>
 #include <net/if.h>
+#include <linux/capability.h>
 
 #define ERR_EXIT(m) \
     do { \

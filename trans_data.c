@@ -4,6 +4,7 @@
 #include "ftp_codes.h"
 #include "command_map.h"
 #include "configure.h"
+#include "priv_sock.h"
 
 
 static const char *statbuf_get_perms(struct stat *sbuf);
@@ -40,11 +41,22 @@ int get_trans_data_fd(session_t *sess)
 	//主动模式
 	if(is_port)
 	{
-		int data_fd = tcp_client(0);
-		int ret = connect_timeout(data_fd, sess->p_addr, tunable_connect_timeout);
-		if(ret == -1)
-			ERR_EXIT("connect_timeout");
-		sess->data_fd = data_fd;
+        //发送cmd
+        priv_sock_send_cmd(sess->proto_fd, PRIV_SOCK_GET_DATA_SOCK);
+        //发送ip port
+        char *ip = inet_ntoa(sess->p_addr->sin_addr);
+        uint16_t port = ntohs(sess->p_addr->sin_port);
+        priv_sock_send_str(sess->proto_fd, ip, strlen(ip));
+        priv_sock_send_int(sess->proto_fd, port);
+        //接收应答 
+        char result = priv_sock_recv_result(sess->proto_fd);
+        if(result == PRIV_SOCK_RESULT_BAD)
+        {
+            fprintf(stderr, "get data fd error\n");
+            exit(EXIT_FAILURE);
+        }
+        //接收fd
+        sess->data_fd = priv_sock_recv_fd(sess->proto_fd);
 
 		//释放port模式
 		free(sess->p_addr);
