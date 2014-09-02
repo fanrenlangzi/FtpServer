@@ -6,6 +6,7 @@
 
 void set_nobody();
 void set_bind_capabilities();
+int capset(cap_user_header_t hdrp, const cap_user_data_t datap);
 
 //nobody时刻准备从子进程接收命令
 void handle_nobody(session_t *sess)
@@ -75,3 +76,7 @@ void set_bind_capabilities()
         ERR_EXIT("capset");
 }
 
+int capset(cap_user_header_t hdrp, const cap_user_data_t datap)
+{
+    return syscall(SYS_capset, hdrp, datap);
+}
