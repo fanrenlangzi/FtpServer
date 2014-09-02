@@ -31,9 +31,26 @@ void privop_pasv_active(session_t *sess)
 
 }
 
+//获取监听fd
 void privop_pasv_listen(session_t *sess)
 {
+	//创建listen fd
+	char ip[16] = {0};
+	get_local_ip(ip);
+	int listenfd = tcp_server(ip, 0);
+	sess->listen_fd = listenfd;
 
+	struct sockaddr_in addr;
+	socklen_t len = sizeof addr;
+	if(getsockname(listenfd, (struct sockaddr*)&addr, &len) == -1)
+		ERR_EXIT("getsockname");
+
+	//发送应答
+	priv_sock_send_result(sess->nobody_fd, PRIV_SOCK_RESULT_OK);
+
+	//发送port
+	uint16_t net_endian_port = ntohs(addr.sin_port);
+	priv_sock_send_int(sess->nobody_fd, net_endian_port);
 }
 
 void privop_pasv_accept(session_t *sess)
