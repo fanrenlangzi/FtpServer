@@ -26,9 +26,11 @@ void privop_pasv_get_data_sock(session_t *sess)
 	close(data_fd);
 }
 
+//判断pasv模式是否开启
 void privop_pasv_active(session_t *sess)
 {
-
+	//发给proto结果
+	priv_sock_send_int(sess->nobody_fd, (sess->listen_fd != -1));
 }
 
 //获取监听fd
@@ -53,7 +55,24 @@ void privop_pasv_listen(session_t *sess)
 	priv_sock_send_int(sess->nobody_fd, net_endian_port);
 }
 
+//accept一个新的连接
 void privop_pasv_accept(session_t *sess)
 {
+	//接受新连接
+	int peerfd = accept_timeout(sess->listen_fd, NULL, tunable_accept_timeout);
+	//清除状态
+	close(sess->listen_fd);
+	sess->listen_fd = -1;
+    if(peerfd == -1)
+    {
+    	priv_sock_send_result(sess->nobody_fd, PRIV_SOCK_RESULT_BAD);
+        ERR_EXIT("accept_timeout");
+    }
+    
+    //给对方回应
+    priv_sock_send_result(sess->nobody_fd, PRIV_SOCK_RESULT_OK);
 
+    //将data fd传给对方
+    priv_sock_send_fd(sess->nobody_fd, peerfd);
+    close(peerfd);
 }
