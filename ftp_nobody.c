@@ -23,20 +23,20 @@ void handle_nobody(session_t *sess)
         switch (cmd)
         {
             case PRIV_SOCK_GET_DATA_SOCK:
-            privop_pasv_get_data_sock(sess);
-            break;
+                privop_pasv_get_data_sock(sess);
+                break;
             case PRIV_SOCK_PASV_ACTIVE:
-            privop_pasv_active(sess);
-            break;
+                privop_pasv_active(sess);
+                break;
             case PRIV_SOCK_PASV_LISTEN:
-            privop_pasv_listen(sess);
-            break;
+                privop_pasv_listen(sess);
+                break;
             case PRIV_SOCK_PASV_ACCEPT:
-            privop_pasv_accept(sess);
-            break;
+                privop_pasv_accept(sess);
+                break;
             default:
-            fprintf(stderr, "Unkown command\n");
-            exit(EXIT_FAILURE);
+                fprintf(stderr, "Unkown command\n");
+                exit(EXIT_FAILURE);
         }
 
     }
