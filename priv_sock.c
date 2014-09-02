@@ -5,49 +5,49 @@
 
 void priv_sock_init(session_t *sess)
 {
-	int fds[2];
-	if(socketpair(PF_UNIX, SOCK_STREAM, 0, fds) == -1)
-		ERR_EXIT("socketpair");
+    int fds[2];
+    if(socketpair(PF_UNIX, SOCK_STREAM, 0, fds) == -1)
+        ERR_EXIT("socketpair");
 
-	sess->nobody_fd = fds[0];
-	sess->proto_fd = fds[1];
+    sess->nobody_fd = fds[0];
+    sess->proto_fd = fds[1];
 }
 
 void priv_sock_close(session_t *sess)
 {
-	if(sess->nobody_fd != -1)
-	{
-		close(sess->nobody_fd);
-		sess->nobody_fd = -1;
-	}
+    if(sess->nobody_fd != -1)
+    {
+        close(sess->nobody_fd);
+        sess->nobody_fd = -1;
+    }
 
-	if(sess->proto_fd != -1)
-	{
-		close(sess->proto_fd);
-		sess->proto_fd = -1;
-	}
+    if(sess->proto_fd != -1)
+    {
+        close(sess->proto_fd);
+        sess->proto_fd = -1;
+    }
 }
 void priv_sock_set_nobody_context(session_t *sess)
 {
-	if(sess->proto_fd != -1)
-	{
-		close(sess->proto_fd);
-		sess->proto_fd = -1;
-	}
+    if(sess->proto_fd != -1)
+    {
+        close(sess->proto_fd);
+        sess->proto_fd = -1;
+    }
 }
 
 void priv_sock_set_proto_context(session_t *sess)
 {
-	if(sess->nobody_fd != -1)
-	{
-		close(sess->nobody_fd);
-		sess->nobody_fd = -1;
-	}
+    if(sess->nobody_fd != -1)
+    {
+        close(sess->nobody_fd);
+        sess->nobody_fd = -1;
+    }
 }
 
 void priv_sock_send_cmd(int fd, char cmd)
 {
-	int ret = writen(fd, &cmd, sizeof cmd);
+    int ret = writen(fd, &cmd, sizeof cmd);
     if(ret != sizeof(cmd))
     {
         fprintf(stderr, "priv_sock_send_cmd error\n");
@@ -57,7 +57,7 @@ void priv_sock_send_cmd(int fd, char cmd)
 
 char priv_sock_recv_cmd(int fd)
 {
-	char res;
+    char res;
     int ret = readn(fd, &res, sizeof res);
     //子进程关闭
     if(ret == 0)
@@ -67,8 +67,8 @@ char priv_sock_recv_cmd(int fd)
     }
     if(ret != sizeof(res))
     {
-         fprintf(stderr, "priv_sock_recv_cmd error\n");
-         exit(EXIT_FAILURE);
+        fprintf(stderr, "priv_sock_recv_cmd error\n");
+        exit(EXIT_FAILURE);
     }
 
     return res;

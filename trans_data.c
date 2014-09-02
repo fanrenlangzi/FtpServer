@@ -21,16 +21,16 @@ static int is_pasv_active(session_t *sess);
 //返回值表示成功与否
 int get_trans_data_fd(session_t *sess)
 {
-	int is_port = is_port_active(sess);
-	int is_pasv = is_pasv_active(sess);
+    int is_port = is_port_active(sess);
+    int is_pasv = is_pasv_active(sess);
 
 
-	//两者都未开启，应返回425
-	if(!is_port && !is_pasv)
-	{
-		ftp_reply(sess, FTP_BADSENDCONN, "Use PORT or PASV first.");
-		return 0;
-	}
+    //两者都未开启，应返回425
+    if(!is_port && !is_pasv)
+    {
+        ftp_reply(sess, FTP_BADSENDCONN, "Use PORT or PASV first.");
+        return 0;
+    }
 
     if(is_port && is_pasv)
     {
@@ -38,9 +38,9 @@ int get_trans_data_fd(session_t *sess)
         exit(EXIT_FAILURE);
     }
 
-	//主动模式
-	if(is_port)
-	{
+    //主动模式
+    if(is_port)
+    {
         //发送cmd
         priv_sock_send_cmd(sess->proto_fd, PRIV_SOCK_GET_DATA_SOCK);
         //发送ip port
@@ -58,10 +58,10 @@ int get_trans_data_fd(session_t *sess)
         //接收fd
         sess->data_fd = priv_sock_recv_fd(sess->proto_fd);
 
-		//释放port模式
-		free(sess->p_addr);
-		sess->p_addr = NULL;
-	}
+        //释放port模式
+        free(sess->p_addr);
+        sess->p_addr = NULL;
+    }
 
     if(is_pasv)
     {
@@ -75,12 +75,12 @@ int get_trans_data_fd(session_t *sess)
         sess->listen_fd = -1;
     }
 
-	return 1;
+    return 1;
 }
 
 void trans_list(session_t *sess)
 {
-	DIR *dir = opendir(".");
+    DIR *dir = opendir(".");
     if(dir == NULL)
         ERR_EXIT("opendir");
 
@@ -230,10 +230,10 @@ static const char *statbuf_get_size(struct stat *sbuf)
 
 static int is_port_active(session_t *sess)
 {
-	return (sess->p_addr != NULL);
+    return (sess->p_addr != NULL);
 }
 
 static int is_pasv_active(session_t *sess)
 {
-	return (sess->listen_fd != -1);
+    return (sess->listen_fd != -1);
 }
