@@ -1,5 +1,6 @@
 #include "sysutil.h"
 
+static ssize_t recv_peek(int sockfd, void *buf, size_t len);
 
 int tcp_client(unsigned int port)
 {
@@ -381,7 +382,7 @@ int tcp_client(unsigned int port)
  * @len: 长度
  * 成功返回>=0，失败返回-1
  */
- ssize_t recv_peek(int sockfd, void *buf, size_t len) {
+ static ssize_t recv_peek(int sockfd, void *buf, size_t len) {
  	int nread;
  	while (1) {
         //这个过程只成功调用一次
