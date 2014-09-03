@@ -305,7 +305,11 @@ void do_nlst(session_t *sess)
 
 void do_rest(session_t *sess)
 {
-
+	sess->restart_pos = atoll(sess->args);
+	//Restart position accepted (344545).
+	char text[1024] = {0};
+	snprintf(text, sizeof text, "Restart position accepted (%lld).", sess->restart_pos);
+	ftp_reply(sess, FTP_RESTOK, text);
 }
 
 void do_abor(session_t *sess)
