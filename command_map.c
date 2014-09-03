@@ -358,7 +358,14 @@ void do_mkd(session_t *sess)
 
 void do_rmd(session_t *sess)
 {
-
+	if(rmdir(sess->args) == -1)
+	{
+		//550 Remove directory operation failed.
+		ftp_reply(sess, FTP_FILEFAIL, "Remove directory operation failed.");
+		return;
+	}
+	//250 Remove directory operation successful.
+	ftp_reply(sess, FTP_RMDIROK, "Remove directory operation successful.");
 }
 
 void do_dele(session_t *sess)
