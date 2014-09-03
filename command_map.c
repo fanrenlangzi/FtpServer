@@ -376,7 +376,7 @@ void do_stat(session_t *sess)
 
 void do_noop(session_t *sess)
 {
-
+	ftp_reply(sess, FTP_GREET, "(FtpServer 1.0)");
 }
 
 void do_help(session_t *sess)
