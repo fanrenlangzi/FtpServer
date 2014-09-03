@@ -19,7 +19,29 @@ static int is_pasv_active(session_t *sess);
 static void get_port_data_fd(session_t *sess);
 static void get_pasv_data_fd(session_t *sess);
 
+static void trans_list_common(session_t *sess, int list);
 
+
+void trans_list(session_t *sess, int list)
+{
+    //发起数据连接
+    if(get_trans_data_fd(sess) == 0)
+        return ;
+
+    //给出150 Here comes the directory listing.
+    ftp_reply(sess, FTP_DATACONN, "Here comes the directory listing.");
+
+    //传输目录列表
+    if(list == 1)
+        trans_list_common(sess, 1);
+    else
+        trans_list_common(sess, 0);
+    close(sess->data_fd);   //传输结束记得关闭
+    sess->data_fd = -1;
+
+    //给出226 Directory send OK.
+    ftp_reply(sess, FTP_TRANSFEROK, "Directory send OK.");
+}
 
 //返回值表示成功与否
 int get_trans_data_fd(session_t *sess)
@@ -50,41 +72,6 @@ int get_trans_data_fd(session_t *sess)
         get_pasv_data_fd(sess);
 
     return 1;
-}
-
-void trans_list(session_t *sess)
-{
-    DIR *dir = opendir(".");
-    if(dir == NULL)
-        ERR_EXIT("opendir");
-
-    struct dirent *dr;
-    while((dr = readdir(dir)))
-    {
-        const char *filename = dr->d_name;
-        if(filename[0] == '.')
-            continue;
-
-        char buf[1024] = {0};
-        struct stat sbuf;
-        if(lstat(filename, &sbuf) == -1)
-            ERR_EXIT("lstat");
-
-        strcpy(buf, statbuf_get_perms(&sbuf));
-        strcat(buf, " ");
-        strcat(buf, statbuf_get_user_info(&sbuf));
-        strcat(buf, " ");
-        strcat(buf, statbuf_get_size(&sbuf));
-        strcat(buf, " ");
-        strcat(buf, statbuf_get_date(&sbuf));
-        strcat(buf, " ");
-        strcat(buf, statbuf_get_filename(&sbuf, filename));
-
-        strcat(buf, "\r\n");
-        writen(sess->data_fd, buf, strlen(buf));
-    }
-
-    closedir(dir);
 }
 
 
@@ -177,7 +164,7 @@ static const char *statbuf_get_filename(struct stat *sbuf, const char *name)
         char linkfile[1024] = {0};
         if(readlink(name, linkfile, sizeof linkfile) == -1)
             ERR_EXIT("readlink");
-        snprintf(filename, sizeof filename, " %s -> %s", name, linkfile);
+        snprintf(filename, sizeof filename, "%s -> %s", name, linkfile);
     }else
     {
         strcpy(filename, name);
@@ -257,4 +244,46 @@ static void get_pasv_data_fd(session_t *sess)
 
     //接收fd
     sess->data_fd = priv_sock_recv_fd(sess->proto_fd);
+}
+
+static void trans_list_common(session_t *sess, int list)
+{
+    DIR *dir = opendir(".");
+    if(dir == NULL)
+        ERR_EXIT("opendir");
+
+    struct dirent *dr;
+    while((dr = readdir(dir)))
+    {
+        const char *filename = dr->d_name;
+        if(filename[0] == '.')
+            continue;
+
+        char buf[1024] = {0};
+        struct stat sbuf;
+        if(lstat(filename, &sbuf) == -1)
+            ERR_EXIT("lstat");
+
+        if(list == 1) // LIST
+        {
+            strcpy(buf, statbuf_get_perms(&sbuf));
+            strcat(buf, " ");
+            strcat(buf, statbuf_get_user_info(&sbuf));
+            strcat(buf, " ");
+            strcat(buf, statbuf_get_size(&sbuf));
+            strcat(buf, " ");
+            strcat(buf, statbuf_get_date(&sbuf));
+            strcat(buf, " ");
+            strcat(buf, statbuf_get_filename(&sbuf, filename));
+        }
+        else    //NLST
+        {
+            strcpy(buf, statbuf_get_filename(&sbuf, filename));
+        }
+
+        strcat(buf, "\r\n");
+        writen(sess->data_fd, buf, strlen(buf));
+    }
+
+    closedir(dir);
 }
