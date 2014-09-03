@@ -445,7 +445,24 @@ void do_feat(session_t *sess)
 
 void do_size(session_t *sess)
 {
+	struct stat sbuf;
+	if(lstat(sess->args, &sbuf) == -1)
+	{
+		ftp_reply(sess, FTP_FILEFAIL, "SIZE operation failed.");
+		return;
+	}
 
+	//只能求普通文件size
+	if(!S_ISREG(sbuf.st_mode))
+	{
+		ftp_reply(sess, FTP_FILEFAIL, "SIZE operation failed.");
+		return;
+	}
+
+	//213 6
+	char text[1024] = {0};
+	snprintf(text, sizeof text, "%lu", sbuf.st_size);
+	ftp_reply(sess, FTP_SIZEOK, text);
 }
 
 void do_stat(session_t *sess)
