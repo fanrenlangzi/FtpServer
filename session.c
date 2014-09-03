@@ -21,6 +21,7 @@ void session_init(session_t *sess)
 	sess->listen_fd = -1;
 
 	sess->restart_pos = 0;
+	sess->rnfr_name = NULL;
 }
 
 void session_reset_command(session_t *sess)

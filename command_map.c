@@ -382,12 +382,36 @@ void do_dele(session_t *sess)
 
 void do_rnfr(session_t *sess)
 {
-
+	if(sess->rnfr_name) //防止内存泄露
+	{
+		free(sess->rnfr_name);
+		sess->rnfr_name = NULL;
+	}
+	sess->rnfr_name = (char*)malloc(strlen(sess->args)+1);
+	strcpy(sess->rnfr_name, sess->args);
+	//350 Ready for RNTO.
+	ftp_reply(sess, FTP_RNFROK, "Ready for RNTO.");
 }
 
 void do_rnto(session_t *sess)
 {
+	if(sess->rnfr_name == NULL)
+	{
+		//503 RNFR required first.
+		ftp_reply(sess, FTP_NEEDRNFR, "RNFR required first.");
+		return;
+	}
 
+	if(rename(sess->rnfr_name, sess->args) == -1)
+	{
+		ftp_reply(sess, FTP_FILEFAIL, "Rename failed.");
+		return;
+	}
+	free(sess->rnfr_name);
+	sess->rnfr_name = NULL;
+
+	//250 Rename successful.
+	ftp_reply(sess, FTP_RENAMEOK, "Rename successful.");
 }
 
 void do_site(session_t *sess)

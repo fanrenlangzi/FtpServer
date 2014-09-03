@@ -23,6 +23,7 @@ typedef struct{
     int listen_fd; //监听fd，用于PASV模式
 
     long long restart_pos;  //文件传输断点
+    char *rnfr_name;    //文件重命名 RNTR RNTO
 } session_t;
 
 //初始化session
