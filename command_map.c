@@ -363,7 +363,14 @@ void do_rmd(session_t *sess)
 
 void do_dele(session_t *sess)
 {
-
+	if(unlink(sess->args) == -1)
+	{
+		//550 Delete operation failed.
+		ftp_reply(sess, FTP_FILEFAIL, "Delete operation failed.");
+		return;
+	}
+	//250 Delete operation successful.
+	ftp_reply(sess, FTP_DELEOK, "Delete operation successful.");
 }
 
 void do_rnfr(session_t *sess)
