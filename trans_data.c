@@ -21,6 +21,92 @@ static void get_pasv_data_fd(session_t *sess);
 
 static void trans_list_common(session_t *sess, int list);
 
+void download_file(session_t *sess)
+{
+    //获取data fd
+    if(get_trans_data_fd(sess) == 0)
+    {
+        ftp_reply(sess, FTP_FILEFAIL, "Failed to open file."); 
+        return;
+    }
+        
+    //open 文件
+    int fd = open(sess->args, O_RDONLY);
+    if(fd == -1)
+    {
+        ftp_reply(sess, FTP_FILEFAIL, "Failed to open file."); 
+        return;
+    }
+
+    //对文件加锁
+    if(lock_file_read(fd) == -1)
+    {
+        ftp_reply(sess, FTP_FILEFAIL, "Failed to open file."); 
+        return;
+    }
+
+    //判断是否是普通文件
+    struct stat sbuf;
+    if(fstat(fd, &sbuf) == -1)
+        ERR_EXIT("fstat");
+    if(!S_ISREG(sbuf.st_mode))
+    {
+        ftp_reply(sess, FTP_FILEFAIL, "Can only download regular file."); 
+        return;
+    }
+
+    //判断断点续传
+    unsigned long filesize = sbuf.st_size;//剩余的文件字节
+    int offset = sess->restart_pos;
+    if(offset != 0)
+    {
+        filesize -= offset;
+    }
+
+    if(lseek(fd, offset, SEEK_SET) == -1)
+        ERR_EXIT("lseek");
+
+    //150 ascii
+    //150 Opening ASCII mode data connection for /home/wing/redis-stable.tar.gz (1251318 bytes).
+    char text[1024] = {0};
+    if(sess->ascii_mode == 1)
+        snprintf(text, sizeof text, "Opening ASCII mode data connection for %s (%lu bytes).", sess->args, filesize);
+    else
+        snprintf(text, sizeof text, "Opening Binary mode data connection for %s (%lu bytes).", sess->args, filesize);
+    ftp_reply(sess, FTP_DATACONN, text);
+
+    //传输
+    int flag = 0;   //记录下载的结果
+    int nleft = filesize;   //剩余字节数
+    int block_size = 0; //一次传输的字节数
+    const int kSize = 4096;
+    while(nleft > 0)
+    {
+        block_size = (nleft > kSize) ? kSize : nleft;
+        int nwrite = sendfile(sess->data_fd, fd, NULL, block_size);
+        if(nwrite == -1)
+        {
+            flag = 1;   //错误
+            break;
+        }
+        nleft -= nwrite;
+    }
+    if(nleft == 0)
+        flag = 0;   //正确退出
+
+    //清理 关闭fd 文件解锁
+    if(unlock_file(fd) == -1)
+        ERR_EXIT("unlock_file");
+    close(fd);
+    close(sess->data_fd);
+    sess->data_fd = -1;
+
+    //226
+    if(flag == 0)
+        ftp_reply(sess, FTP_TRANSFEROK, "Transfer complete.");
+    else if(flag == 1)
+        ftp_reply(sess, FTP_BADSENDFILE, "Sendfile failed.");
+}
 
 void upload_file(session_t *sess, int is_appe)
 {
