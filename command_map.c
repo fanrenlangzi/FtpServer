@@ -321,31 +321,23 @@ void do_retr(session_t *sess)
 	ftp_reply(sess, FTP_DATACONN, text);
 
 	//传输
-	char buf[4096] = {0};
 	int flag = 0;	//记录下载的结果
-	while(1)
+	int nleft = sbuf.st_size;	//剩余字节数
+	int block_size = 0; //一次传输的字节数
+	const int kSize = 4096;
+	while(nleft > 0)
 	{
-		int ret = read(fd, buf, sizeof buf);
-		if(ret == -1)
+		block_size = (nleft > kSize) ? kSize : nleft;
+		int nwrite = sendfile(sess->data_fd, fd, NULL, block_size);
+		if(nwrite == -1)
 		{
-			if(errno == EINTR)
-				continue;
-			flag = 1;	//读取文件错误
+			flag = 1;	//错误
 			break;
 		}
-
-		if(ret == 0)
-		{
-			flag = 0; //传输正常结束
-			break;
-		}
-
-		if(writen(sess->data_fd, buf, ret) != ret)
-		{
-			flag = 2;	//网络错误
-			break;	
-		}
+		nleft -= nwrite;
 	}
+	if(nleft == 0)
+		flag = 0;	//正确退出
 
 	//清理 关闭fd 文件解锁
 	if(unlock_file(fd) == -1)
@@ -358,9 +350,7 @@ void do_retr(session_t *sess)
 	if(flag == 0)
 		ftp_reply(sess, FTP_TRANSFEROK, "Transfer complete.");
 	else if(flag == 1)
-		ftp_reply(sess, FTP_FILEFAIL, "Reading file failed.");
-	else
-		ftp_reply(sess, FTP_FILEFAIL, "Network writing failed.");
+		ftp_reply(sess, FTP_BADSENDFILE, "Sendfile failed.");
 }
 
 void do_stor(session_t *sess)
