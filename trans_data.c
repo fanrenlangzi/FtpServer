@@ -22,6 +22,122 @@ static void get_pasv_data_fd(session_t *sess);
 static void trans_list_common(session_t *sess, int list);
 
 
+void upload_file(session_t *sess, int is_appe)
+{
+    //获取data fd
+    if(get_trans_data_fd(sess) == 0)
+    {
+        ftp_reply(sess, FTP_UPLOADFAIL, "Failed to get data fd."); 
+        return;
+    }
+        
+    //open 文件
+    int fd = open(sess->args, O_WRONLY | O_CREAT, 0666);
+    if(fd == -1)
+    {
+        ftp_reply(sess, FTP_UPLOADFAIL, "Failed to open file."); 
+        return;
+    }
+
+    //对文件加锁
+    if(lock_file_write(fd) == -1)
+    {
+        ftp_reply(sess, FTP_UPLOADFAIL, "Failed to lock file."); 
+        return;
+    }
+
+    //判断是否是普通文件
+    struct stat sbuf;
+    if(fstat(fd, &sbuf) == -1)
+        ERR_EXIT("fstat");
+    if(!S_ISREG(sbuf.st_mode))
+    {
+        ftp_reply(sess, FTP_UPLOADFAIL, "Can only upload regular file."); 
+        return;
+    }
+
+    //区分模式
+    long long offset = sess->restart_pos;
+    unsigned long filesize = 0;
+    if(!is_appe && offset == 0) //STOR
+    {
+        //创建新的文件
+        ftruncate(fd, 0);   //如果源文件存在则直接覆盖
+    }
+    else if(!is_appe && offset != 0) // REST + STOR
+    {
+        //lseek进行偏移
+        ftruncate(fd, offset);  //截断后面的内容
+        if(lseek(fd, offset, SEEK_SET) == -1)
+            ERR_EXIT("lseek");
+        filesize = offset;
+    }
+    else    //APPE
+    {
+        //对文件进行扩展 偏移到末尾进行追加
+        if(lseek(fd, 0, SEEK_END) == -1)
+            ERR_EXIT("lseek");
+
+        //获取文件大小
+        if(fstat(fd, &sbuf) == -1)
+            ERR_EXIT("fstat");
+        filesize = sbuf.st_size;
+    }
+
+    //150 ascii
+    //150 Opening ASCII mode data connection for /home/wing/redis-stable.tar.gz (1251318 bytes).
+    char text[1024] = {0};
+    if(sess->ascii_mode == 1)
+        snprintf(text, sizeof text, "Opening ASCII mode data connection for %s (%lu bytes).", sess->args, filesize);
+    else
+        snprintf(text, sizeof text, "Opening Binary mode data connection for %s (%lu bytes).", sess->args, filesize);
+    ftp_reply(sess, FTP_DATACONN, text);
+
+    //上传
+    char buf[4096] = {0};
+    int flag = 0;
+    while(1)
+    {
+        int nread = read(sess->data_fd, buf, sizeof buf);
+        if(nread == -1)
+        {
+            if(errno == EINTR)
+                continue;
+            flag = 1;
+            break;
+        }
+        else if(nread == 0)
+        {
+            flag = 0;
+            break;
+        }
+
+        if(writen(fd, buf, nread) != nread)
+        {
+            flag = 2;
+            break;
+        }
+    }
+
+    //清理 关闭fd 文件解锁
+    if(unlock_file(fd) == -1)
+        ERR_EXIT("unlock_file");
+    close(fd);
+    close(sess->data_fd);
+    sess->data_fd = -1;
+
+
+    //226
+    if(flag == 0)
+        ftp_reply(sess, FTP_TRANSFEROK, "Transfer complete.");
+    else if(flag == 1)
+        ftp_reply(sess, FTP_BADSENDNET, "Reading from Network Failed.");
+    else
+        ftp_reply(sess, FTP_BADSENDFILE, "Writing to File Failed.");
+
+}
+
+
 void trans_list(session_t *sess, int list)
 {
     //发起数据连接

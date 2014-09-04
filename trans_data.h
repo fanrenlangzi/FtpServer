@@ -3,6 +3,7 @@
 
 #include "session.h"
 
+void upload_file(session_t *sess, int is_appe);
 int get_trans_data_fd(session_t *sess);
 void trans_list(session_t *sess, int list);
 

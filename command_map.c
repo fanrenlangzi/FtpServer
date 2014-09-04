@@ -366,12 +366,12 @@ void do_retr(session_t *sess)
 
 void do_stor(session_t *sess)
 {
-
+	upload_file(sess, 0);
 }
 
 void do_appe(session_t *sess)
 {
-
+	upload_file(sess, 1);
 }
 
 void do_list(session_t *sess)
