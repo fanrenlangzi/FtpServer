@@ -2,6 +2,41 @@
 
 static ssize_t recv_peek(int sockfd, void *buf, size_t len);
 
+
+int lock_file_read(int fd)
+{
+    struct flock lock;
+    memset(&lock, 0, sizeof lock);
+    lock.l_type = F_RDLCK;
+    lock.l_whence = SEEK_SET;
+    lock.l_start = 0;
+    lock.l_len = 0;
+    lock.l_pid = getpid();
+
+    int ret;
+    do
+    {
+    	ret = fcntl(fd, F_SETLKW, &lock);
+    }
+    while(ret == -1 && errno == EINTR);
+
+    return ret;
+}
+
+int unlock_file(int fd)
+{
+	struct flock lock;
+    memset(&lock, 0, sizeof lock);
+    lock.l_type = F_UNLCK;
+    lock.l_whence = SEEK_SET;
+    lock.l_start = 0;
+    lock.l_len = 0;
+    lock.l_pid = getpid();
+
+    return fcntl(fd, F_SETLK, &lock);
+}
+
+
 int tcp_client(unsigned int port)
 {
 	int sockfd;

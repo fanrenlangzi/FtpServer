@@ -279,7 +279,88 @@ void do_mode(session_t *sess)
 
 void do_retr(session_t *sess)
 {
+	//获取data fd
+	if(get_trans_data_fd(sess) == 0)
+	{
+		ftp_reply(sess, FTP_FILEFAIL, "Failed to open file."); 
+		return;
+	}
+        
+	//open 文件
+	int fd = open(sess->args, O_RDONLY);
+	if(fd == -1)
+	{
+		ftp_reply(sess, FTP_FILEFAIL, "Failed to open file."); 
+		return;
+	}
 
+	//对文件加锁
+	if(lock_file_read(fd) == -1)
+	{
+		ftp_reply(sess, FTP_FILEFAIL, "Failed to open file."); 
+		return;
+	}
+
+	//判断是否是普通文件
+	struct stat sbuf;
+	if(fstat(fd, &sbuf) == -1)
+		ERR_EXIT("fstat");
+	if(!S_ISREG(sbuf.st_mode))
+	{
+		ftp_reply(sess, FTP_FILEFAIL, "Can only download regular file."); 
+		return;
+	}
+
+	//150 ascii
+	//150 Opening ASCII mode data connection for /home/wing/redis-stable.tar.gz (1251318 bytes).
+	char text[1024] = {0};
+	if(sess->ascii_mode == 1)
+		snprintf(text, sizeof text, "Opening ASCII mode data connection for %s (%lu bytes).", sess->args, sbuf.st_size);
+	else
+		snprintf(text, sizeof text, "Opening Binary mode data connection for %s (%lu bytes).", sess->args, sbuf.st_size);
+	ftp_reply(sess, FTP_DATACONN, text);
+
+	//传输
+	char buf[4096] = {0};
+	int flag = 0;	//记录下载的结果
+	while(1)
+	{
+		int ret = read(fd, buf, sizeof buf);
+		if(ret == -1)
+		{
+			if(errno == EINTR)
+				continue;
+			flag = 1;	//读取文件错误
+			break;
+		}
+
+		if(ret == 0)
+		{
+			flag = 0; //传输正常结束
+			break;
+		}
+
+		if(writen(sess->data_fd, buf, ret) != ret)
+		{
+			flag = 2;	//网络错误
+			break;	
+		}
+	}
+
+	//清理 关闭fd 文件解锁
+	if(unlock_file(fd) == -1)
+		ERR_EXIT("unlock_file");
+	close(fd);
+	close(sess->data_fd);
+	sess->data_fd = -1;
+
+	//226
+	if(flag == 0)
+		ftp_reply(sess, FTP_TRANSFEROK, "Transfer complete.");
+	else if(flag == 1)
+		ftp_reply(sess, FTP_FILEFAIL, "Reading file failed.");
+	else
+		ftp_reply(sess, FTP_FILEFAIL, "Network writing failed.");
 }
 
 void do_stor(session_t *sess)
