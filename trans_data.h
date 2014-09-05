@@ -5,7 +5,6 @@
 
 void download_file(session_t *sess);
 void upload_file(session_t *sess, int is_appe);
-int get_trans_data_fd(session_t *sess);
 void trans_list(session_t *sess, int list);
 
 #endif /* TRANS_DATA_H */
