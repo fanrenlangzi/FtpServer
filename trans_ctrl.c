@@ -2,7 +2,16 @@
 #include "common.h"
 #include "sysutil.h"
 #include "configure.h"
+#include "command_map.h"
+#include "ftp_codes.h"
 
+session_t *p_sess = NULL;
+
+static void handle_signal_alarm_ctrl_fd(int sig);
+static void handle_signal_alarm_data_fd(int sig);
+
+
+//限速功能
 void limit_curr_rate(session_t *sess, int nbytes, int is_upload)
 {
     //获取当前时间
@@ -60,4 +69,73 @@ void limit_curr_rate(session_t *sess, int nbytes, int is_upload)
     //注意更新当前时间
     sess->start_time_sec = get_curr_time_sec();
     sess->start_time_usec = get_curr_time_usec();
+}
+
+
+//开启控制连接的定时器
+void setup_signal_alarm_ctrl_fd()
+{
+    if(signal(SIGALRM, handle_signal_alarm_ctrl_fd) == SIG_ERR)
+        ERR_EXIT("signal");
+}
+
+//开始计时
+void start_signal_alarm_ctrl_fd()
+{
+    alarm(tunable_idle_session_timeout);
+}
+
+//信号处理程序用于控制连接
+static void handle_signal_alarm_ctrl_fd(int sig)
+{
+    if(tunable_idle_session_timeout > 0) //用户配置了此选项
+    {
+        //直接关闭控制连接，然后退出
+        shutdown(p_sess->peerfd, SHUT_RD);
+        //421
+        ftp_reply(p_sess, FTP_IDLE_TIMEOUT, "Timeout.");
+        shutdown(p_sess->peerfd, SHUT_WR);
+        exit(EXIT_SUCCESS);
+    }
+}
+
+//安装数据连接的定时器
+void setup_signal_alarm_data_fd()
+{
+    if(signal(SIGALRM, handle_signal_alarm_data_fd) == SIG_ERR)
+        ERR_EXIT("signal");
+}
+
+//数据连接开始计时
+void start_signal_alarm_data_fd()
+{
+    alarm(tunable_data_connection_timeout);
+}
+
+//信号处理，用户数据连接
+static void handle_signal_alarm_data_fd(int sig)
+{
+    if(tunable_data_connection_timeout > 0)
+    {
+        if(p_sess->is_translating_data == 1)
+        {
+            //有数据传输则重新启动定时器
+            start_signal_alarm_data_fd();
+        }
+        else
+        {
+            //没有数据则给421，并且退出
+            close(p_sess->data_fd);
+            shutdown(p_sess->peerfd, SHUT_RD);
+            ftp_reply(p_sess, FTP_DATA_TIMEOUT, "Timeout.");
+            shutdown(p_sess->peerfd, SHUT_WR);
+            exit(EXIT_SUCCESS);
+        }
+    }
+}
+
+//取消定时器
+void cancel_signal_alarm()
+{
+    alarm(0);
 }
