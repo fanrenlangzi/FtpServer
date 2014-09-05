@@ -158,6 +158,8 @@ static void handle_signal_sigurg(int sig)
     {
         //处理abor指令
         p_sess->is_receive_abor = 1;
+        close(p_sess->data_fd);
+        p_sess->data_fd = -1;
     }
     else
     {
