@@ -188,8 +188,12 @@ void upload_file(session_t *sess, int is_appe)
         snprintf(text, sizeof text, "Opening Binary mode data connection for %s (%lu bytes).", sess->args, filesize);
     ftp_reply(sess, FTP_DATACONN, text);
 
+    //更新当前时间
+    sess->start_time_sec = get_curr_time_sec();
+    sess->start_time_usec = get_curr_time_usec();
+
     //上传
-    char buf[4096] = {0};
+    char buf[65536] = {0};
     int flag = 0;
     while(1)
     {
@@ -212,6 +216,9 @@ void upload_file(session_t *sess, int is_appe)
             flag = 2;
             break;
         }
+
+        //实行限速
+        limit_curr_rate(sess, nread, 1);
     }
 
     //清理 关闭fd 文件解锁
