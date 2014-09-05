@@ -48,6 +48,9 @@ void priv_sock_set_proto_context(session_t *sess)
     }
 
     setup_signal_alarm_ctrl_fd(); //安装定时器
+    setup_signal_sigurg(); //安装sigurg
+    activate_oobinline(sess->peerfd);   //开启带外数据
+    activate_signal_sigurg(sess->peerfd);   //开启sigurg信号
 }
 
 void priv_sock_send_cmd(int fd, char cmd)

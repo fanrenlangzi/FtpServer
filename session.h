@@ -32,6 +32,7 @@ typedef struct{
 
 
     int is_translating_data; //是否在传输数据
+    int is_receive_abor;    //是否收到了abor
 } session_t;
 
 //初始化session

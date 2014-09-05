@@ -30,6 +30,7 @@ void session_init(session_t *sess)
 	sess->start_time_usec = 0;
 
 	sess->is_translating_data = 0;
+	sess->is_receive_abor = 0;
 }
 
 void session_reset_command(session_t *sess)
