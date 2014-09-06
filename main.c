@@ -3,10 +3,15 @@
 #include "session.h"
 #include "configure.h"
 #include "parse_conf.h"
+#include "ftp_codes.h"
+#include "command_map.h"
 
 extern session_t *p_sess;
+unsigned int num_of_clients = 0; //表示连接数目
 
 void print_conf();
+void limit_num_clients(session_t *sess);
+void handle_sigchld(int sig);
 
 int main(int argc, char const *argv[])
 {
@@ -16,7 +21,7 @@ int main(int argc, char const *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	if(signal(SIGCHLD, SIG_IGN) == SIG_ERR)
+	if(signal(SIGCHLD, handle_sigchld) == SIG_ERR)
 		ERR_EXIT("signal");
 
 	parseconf_load_file("ftpserver.conf");
@@ -38,6 +43,9 @@ int main(int argc, char const *argv[])
 		else if(peerfd == -1)
 			ERR_EXIT("accept_timeout");
 
+		++num_of_clients; //连接数目+1
+		sess.curr_clients = num_of_clients;
+		
 		if((pid = fork()) == -1)
 			ERR_EXIT("fork");
 		else if(pid == 0)
@@ -45,6 +53,7 @@ int main(int argc, char const *argv[])
 			close(listenfd);
 			
 			sess.peerfd = peerfd;
+			limit_num_clients(&sess);
 			session_begin(&sess);
 			exit(EXIT_SUCCESS);
 		}
@@ -77,4 +86,23 @@ void print_conf()
         printf("tunable_listen_address=NULL\n");
     else
         printf("tunable_listen_address=%s\n", tunable_listen_address); 
+}
+
+void limit_num_clients(session_t *sess)
+{
+	if(tunable_max_clients > 0 && num_of_clients > tunable_max_clients)
+	{
+		//421 There are too many connected users, please try later.
+		ftp_reply(sess, FTP_TOO_MANY_USERS, "There are too many connected users, please try later.");
+		exit(EXIT_FAILURE);
+	}
+}
+
+void handle_sigchld(int sig)
+{
+	pid_t pid;
+	while((pid = waitpid(-1, NULL, WNOHANG)) > 0)
+	{
+		--num_of_clients;
+	}
 }
