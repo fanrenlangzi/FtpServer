@@ -6,6 +6,8 @@
 #include "configure.h"
 #include "trans_data.h"
 #include "priv_sock.h"
+#include "strutil.h"
+#include "trans_ctrl.h"
 
 
 typedef struct ftpcmd
@@ -419,7 +421,20 @@ void do_rnto(session_t *sess)
 
 void do_site(session_t *sess)
 {
+	char cmd[1024] = {0};
+	char args[1024] = {0};
 
+	str_split(sess->args, cmd, args, ' ');
+	str_upper(cmd);
+
+	if(strcmp("CHMOD", cmd))
+		do_site_chmod(sess, args);
+	else if(strcmp("UMASK", cmd))
+		do_site_umask(sess, args);
+	else if(strcmp("HELP", cmd))
+		do_site_help(sess);
+	else
+		ftp_reply(sess, FTP_BADCMD, "Unknown SITE command.");
 }
 
 void do_syst(session_t *sess)

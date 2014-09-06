@@ -17,4 +17,10 @@ void cancel_signal_alarm();
 
 void setup_signal_sigurg();
 
+
+void do_site_chmod(session_t *sess, char *args);
+void do_site_umask(session_t *sess, char *args);
+void do_site_help(session_t *sess);
+
+
 #endif	/* TRANS_CTRL_H */
