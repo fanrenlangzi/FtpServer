@@ -5,13 +5,19 @@
 #include "parse_conf.h"
 #include "ftp_codes.h"
 #include "command_map.h"
+#include "hash.h"
 
 extern session_t *p_sess;
 unsigned int num_of_clients = 0; //表示连接数目
 
+hash_t *ip_to_clients;
+hash_t *pid_to_ip;
+
 void print_conf();
 void limit_num_clients(session_t *sess);
 void handle_sigchld(int sig);
+unsigned int hash_func(unsigned int buckets, void *key);
+unsigned int add_ip_to_hash(hash_t *hash, uint32_t ip);
 
 int main(int argc, char const *argv[])
 {
@@ -27,6 +33,9 @@ int main(int argc, char const *argv[])
 	parseconf_load_file("ftpserver.conf");
 	print_conf();
 
+	ip_to_clients = hash_alloc(256, hash_func);
+	pid_to_ip = hash_alloc(256, hash_func);
+
 	//创建一个监听fd
 	int listenfd = tcp_server(tunable_listen_address, tunable_listen_port);
 
@@ -37,7 +46,8 @@ int main(int argc, char const *argv[])
 	
 	while(1)
 	{
-		int peerfd = accept_timeout(listenfd, NULL, tunable_accept_timeout);
+		struct sockaddr_in addr;
+		int peerfd = accept_timeout(listenfd, &addr, tunable_accept_timeout);
 		if(peerfd  == -1 && errno == ETIMEDOUT)
 			continue;
 		else if(peerfd == -1)
@@ -45,6 +55,8 @@ int main(int argc, char const *argv[])
 
 		++num_of_clients; //连接数目+1
 		sess.curr_clients = num_of_clients;
+		uint32_t ip = addr.sin_addr.s_addr;
+		sess.curr_ip_clients = add_ip_to_hash(ip_to_clients, ip);
 		
 		if((pid = fork()) == -1)
 			ERR_EXIT("fork");
@@ -59,6 +71,8 @@ int main(int argc, char const *argv[])
 		}
 		else
 		{
+			//pid_to_ip
+			hash_add_entry(pid_to_ip, &pid, sizeof(pid), &ip, sizeof(ip));
 			close(peerfd);
 		}
 	}
@@ -90,10 +104,17 @@ void print_conf()
 
 void limit_num_clients(session_t *sess)
 {
-	if(tunable_max_clients > 0 && num_of_clients > tunable_max_clients)
+	if(tunable_max_clients > 0 && sess->curr_clients > tunable_max_clients)
 	{
 		//421 There are too many connected users, please try later.
 		ftp_reply(sess, FTP_TOO_MANY_USERS, "There are too many connected users, please try later.");
+		exit(EXIT_FAILURE);
+	}
+
+	if(tunable_max_per_ip > 0 && sess->curr_ip_clients > tunable_max_per_ip)
+	{
+		//421 There are too many connections from your internet address.
+		ftp_reply(sess, FTP_IP_LIMIT, "There are too many connections from your internet address.");
 		exit(EXIT_FAILURE);
 	}
 }
@@ -104,5 +125,45 @@ void handle_sigchld(int sig)
 	while((pid = waitpid(-1, NULL, WNOHANG)) > 0)
 	{
 		--num_of_clients;
+		//pid -> ip
+		uint32_t *p_ip = hash_lookup_value_by_key(pid_to_ip, &pid, sizeof(pid));
+		assert(p_ip != NULL); //ip必须能找到
+		uint32_t ip = *p_ip;
+		//ip -> clients
+		unsigned int *p_value = (unsigned int *)hash_lookup_value_by_key(ip_to_clients, &ip, sizeof(ip));
+		assert(p_value != NULL && *p_value > 0);
+		--*p_value;
+
+		//释放hash表的结点
+		hash_free_entry(pid_to_ip, &pid, sizeof(pid));
+	}
+}
+
+//hash函数
+unsigned int hash_func(unsigned int buckets, void *key)
+{
+    unsigned int *number = (unsigned int*)key;
+
+    return (*number) % buckets;
+}
+
+
+//在对应的ip记录中+1,返回当前ip的客户数量
+unsigned int add_ip_to_hash(hash_t *hash, uint32_t ip)
+{
+	unsigned int *p_value = (unsigned int *)hash_lookup_value_by_key(hash, &ip, sizeof(ip));
+	if(p_value == NULL)
+	{
+		unsigned int value = 1;
+		hash_add_entry(hash, &ip, sizeof(ip), &value, sizeof(value));
+		return 1;
+	}
+	else
+	{
+		unsigned int value = *p_value;
+		value++;
+		*p_value  = value;
+
+		return value;
 	}
 }

@@ -6,6 +6,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdint.h>
+#include <assert.h>
 #include <unistd.h>
 #include <errno.h>
 #include <signal.h>
