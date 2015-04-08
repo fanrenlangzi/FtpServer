@@ -96,8 +96,6 @@ void parseconf_load_setting(const char *setting)
 			if (strcmp(key, p_str_setting->p_setting_name) == 0)
 			{
 				const char **p_cur_setting = p_str_setting->p_variable;
-				if (*p_cur_setting)
-					free((char*)*p_cur_setting);
 
 				*p_cur_setting = strdup(value);
 				return;
